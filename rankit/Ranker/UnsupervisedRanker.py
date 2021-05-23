@@ -59,9 +59,9 @@ class MasseyRanker(UnsupervisedRanker):
         m = data.shape[0]
         n = table.itemnum
         y = np.zeros(m)
-        dat = np.zeros(m*2, dtype=np.float)
-        col = np.zeros(m*2, dtype=np.int)
-        row = np.zeros(m*2, dtype=np.int)
+        dat = np.zeros(m*2, dtype=np.float64)
+        col = np.zeros(m*2, dtype=np.int32)
+        row = np.zeros(m*2, dtype=np.int32)
         for i, itm in enumerate(data.itertuples(index=False, name=None)):
             row[i*2]=i; col[i*2]=itm[0]; dat[i*2]=itm[4];
             row[i*2+1]=i; col[i*2+1]=itm[1]; dat[i*2+1]=-itm[4];
@@ -79,7 +79,7 @@ class MasseyRanker(UnsupervisedRanker):
             self.rating["rating"] = rating
         else:
             self.rating = pd.DataFrame({
-                "iidx": np.arange(n, dtype=np.int),
+                "iidx": np.arange(n, dtype=np.int32),
                 "rating": rating})
 
         return self._showcase(table, False)
@@ -124,7 +124,7 @@ class ColleyRanker(UnsupervisedRanker):
             self.rating["rating"] = rating
         else:
             self.rating = pd.DataFrame({
-                "iidx": np.arange(table.itemnum, dtype=np.int),
+                "iidx": np.arange(table.itemnum, dtype=np.int32),
                 "rating": rating})
 
         return self._showcase(table, False)
@@ -193,7 +193,7 @@ class KeenerRanker(UnsupervisedRanker):
             self.rating["rating"] = r
         else:
             self.rating = pd.DataFrame({
-                "iidx": np.arange(table.itemnum, dtype=np.int),
+                "iidx": np.arange(table.itemnum, dtype=np.int32),
                 "rating": r})
         return self._showcase(table, False)
 
@@ -257,7 +257,7 @@ class MarkovRanker(UnsupervisedRanker):
             self.rating["rating"] = r
         else:
             self.rating = pd.DataFrame({
-                "iidx": np.arange(table.itemnum, dtype=np.int),
+                "iidx": np.arange(table.itemnum, dtype=np.int32),
                 "rating": r})
         return self._showcase(table, False)
 
@@ -324,7 +324,7 @@ class ODRanker(UnsupervisedRanker):
         res = {}
         for rating_name, r in ratings.items():
             self.rating = pd.DataFrame({
-                "iidx": np.arange(table.itemnum, dtype=np.int),
+                "iidx": np.arange(table.itemnum, dtype=np.int32),
                 "rating": r})
             showcase = self._showcase(table, True if rating_name=='defence' else False)
             res[rating_name] = showcase
@@ -365,7 +365,7 @@ class DifferenceRanker(UnsupervisedRanker):
             self.rating["rating"] = r.values
         else:
             self.rating = pd.DataFrame({
-                "iidx": np.arange(table.itemnum, dtype=np.int),
+                "iidx": np.arange(table.itemnum, dtype=np.int32),
                 "rating": r})
         return self._showcase(table, False)
 
