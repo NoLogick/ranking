@@ -270,15 +270,12 @@ class ODRanker(UnsupervisedRanker):
 
     Parameters
     ----------
-    method: {'summary', 'offence', 'defence'}, default 'summary'.
-        The rating to be returned. 'summary' is offence/defence.
     epsilon: [0, +Inf) default 1e-4
         The small value that forces a convergence.
     threshold: (0, +Inf), default 1e-4
         The threshold that controls when the algorithm will converge.
     """
-    def __init__(self, method='summary', epsilon=1e-4, threshold=1e-4):
-        self.method = method
+    def __init__(self, epsilon=1e-4, threshold=1e-4):
         self.epsilon = epsilon
         self.threshold = threshold
     
@@ -294,7 +291,7 @@ class ODRanker(UnsupervisedRanker):
         -------
         pandas.DataFrame, with column ['name', 'rating', 'rank']
         """
-        method, epsilon, threshold = self.method, self.epsilon, self.threshold
+        epsilon, threshold = self.epsilon, self.threshold
         mtx = pd.DataFrame(data={
             'hidx': pd.concat([table.table.hidx, table.table.vidx]),
             'vidx': pd.concat([table.table.vidx, table.table.hidx]),
@@ -318,21 +315,22 @@ class ODRanker(UnsupervisedRanker):
             d = D.dot(1/o)+np.ones(o.shape[0])*epsilon*(np.sum(1/o))
         o = Dt.dot(1/d)
 
-        if method=='summary':
-            r = o/d
-        elif method=='offence':
-            r = o
-        elif method=='defence':
-            r = d
-        else:
-            raise ValueError('output should be one of summary, offence or defence.')
-        if hasattr(self, "rating"):
-            self.rating["rating"] = r
-        else:
+        ratings = {
+            'summary': o/d,
+            'offence': o,
+            'defence': d,
+        }
+
+        res = {}
+        for rating_name, r in ratings.items():
             self.rating = pd.DataFrame({
                 "iidx": np.arange(table.itemnum, dtype=np.int),
                 "rating": r})
-        return self._showcase(table, True if method=='defence' else False)
+            showcase = self._showcase(table, True if rating_name=='defence' else False)
+            res[rating_name] = showcase
+
+        return res
+
 
 class DifferenceRanker(UnsupervisedRanker):
     """This ranker targets at predicting score difference of games directly.
