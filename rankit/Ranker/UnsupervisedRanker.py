@@ -9,15 +9,17 @@ from scipy.sparse.linalg import lsqr
 from .matrix_build import fast_colley_build
 from numpy.linalg import norm
 
+
 class UnsupervisedRanker(object):
     """Base class for all unsupervised ranking algorithms."""
+
     def rank(self, table, **kargs):
         raise NotImplementedError("UnsupervisedRanker is a abstract class.")
 
     def _showcase(self, table, ascending=False):
         # one need to translate item index to item name.
         indexlut = table.indexlut
-        rating = self.rating # iitm, rating
+        rating = self.rating  # iitm, rating
         itemname = []
         for row in rating.itertuples(index=False, name=None):
             itemname.append(indexlut[row[0]])
@@ -26,6 +28,7 @@ class UnsupervisedRanker(object):
             "rating": rating["rating"]})
         rst['rank'] = rst.rating.rank(method='min', ascending=ascending).astype(np.int32)
         return rst.sort_values(by=['rating', 'name'], ascending=ascending).reset_index(drop=True)
+
 
 class MasseyRanker(UnsupervisedRanker):
     """Massey ranking system proposed by Kenneth Massey: Statistical models applied to the rating of sports teams. 
@@ -37,9 +40,9 @@ class MasseyRanker(UnsupervisedRanker):
     drawMargin: [0, +Inf), default 0.
         When absolute difference between two teams are smaller than drawMargin, this competition is considered as a tie.
     """
-    def __init__(self, drawMargin = 0.0):
+
+    def __init__(self, drawMargin=0.0):
         self.drawMargin = drawMargin
-        
 
     def rank(self, table):
         """Calculate the rank and rating with specified parameters.
@@ -59,17 +62,21 @@ class MasseyRanker(UnsupervisedRanker):
         m = data.shape[0]
         n = table.itemnum
         y = np.zeros(m)
-        dat = np.zeros(m*2, dtype=np.float64)
-        col = np.zeros(m*2, dtype=np.int32)
-        row = np.zeros(m*2, dtype=np.int32)
+        dat = np.zeros(m * 2, dtype=np.float64)
+        col = np.zeros(m * 2, dtype=np.int32)
+        row = np.zeros(m * 2, dtype=np.int32)
         for i, itm in enumerate(data.itertuples(index=False, name=None)):
-            row[i*2]=i; col[i*2]=itm[0]; dat[i*2]=itm[4];
-            row[i*2+1]=i; col[i*2+1]=itm[1]; dat[i*2+1]=-itm[4];
-            if np.abs(itm[2]-itm[3])<=drawMargin:
-                y[i]=0.0
+            row[i * 2] = i;
+            col[i * 2] = itm[0];
+            dat[i * 2] = itm[4];
+            row[i * 2 + 1] = i;
+            col[i * 2 + 1] = itm[1];
+            dat[i * 2 + 1] = -itm[4];
+            if np.abs(itm[2] - itm[3]) <= drawMargin:
+                y[i] = 0.0
             else:
-                y[i] = itm[4]*(itm[2]-itm[3])
-    
+                y[i] = itm[4] * (itm[2] - itm[3])
+
         X = coo_matrix((dat, (row, col)), shape=(m, n))
         X = X.tocsr()
 
@@ -84,6 +91,7 @@ class MasseyRanker(UnsupervisedRanker):
 
         return self._showcase(table, False)
 
+
 class ColleyRanker(UnsupervisedRanker):
     """Colley ranking system proposed by Wesley Colley: 
     Colley's bias free college football ranking method: The colley matrix explained, 2002.
@@ -96,7 +104,8 @@ class ColleyRanker(UnsupervisedRanker):
     drawMargin: [0, +Inf), default 0.
         When absolute difference between two teams are smaller than drawMargin, this competition is considered as a tie.
     """
-    def __init__(self, drawMargin = 0.0):
+
+    def __init__(self, drawMargin=0.0):
         self.drawMargin = drawMargin
 
     def rank(self, table):
@@ -116,7 +125,7 @@ class ColleyRanker(UnsupervisedRanker):
 
         idx = data.iloc[:, :2]
         score = data.iloc[:, 2:]
-        C, b = fast_colley_build(np.require(idx, dtype=np.int32), np.require(score, dtype=np.float64), 
+        C, b = fast_colley_build(np.require(idx, dtype=np.int32), np.require(score, dtype=np.float64),
                                  table.itemnum, drawMargin)
 
         rating = sp.linalg.solve(C, b)
@@ -128,6 +137,7 @@ class ColleyRanker(UnsupervisedRanker):
                 "rating": rating})
 
         return self._showcase(table, False)
+
 
 class KeenerRanker(UnsupervisedRanker):
     """Keener ranking system proposed by James Keener:
@@ -143,11 +153,12 @@ class KeenerRanker(UnsupervisedRanker):
     threshold: (0, +Inf), default 1e-4
         The threshold that controls when the algorithm will converge.
     """
+
     def __init__(self, func=None, epsilon=1e-4, threshold=1e-4):
         self.func = func
         self.epsilon = epsilon
         self.threshold = threshold
-    
+
     def rank(self, table):
         """Calculate the rank and rating with specified parameters.
 
@@ -167,26 +178,27 @@ class KeenerRanker(UnsupervisedRanker):
             'hscore': pd.concat([table.table.hscore, table.table.vscore]),
             'vscore': pd.concat([table.table.vscore, table.table.hscore]),
             'weight': pd.concat([table.table.weight, table.table.weight])
-        }, columns = ['hidx', 'vidx', 'hscore', 'vscore', 'weight']).reset_index(drop=True)
-        mtx['score'] = mtx.hscore+mtx.vscore
-        mtx['hscore'] = (mtx['hscore']+1)/(mtx['score']+2)
-        mtx['vscore'] = (mtx['vscore']+1)/(mtx['score']+2)
+        }, columns=['hidx', 'vidx', 'hscore', 'vscore', 'weight']).reset_index(drop=True)
+        mtx['score'] = mtx.hscore + mtx.vscore
+        mtx['hscore'] = (mtx['hscore'] + 1) / (mtx['score'] + 2)
+        mtx['vscore'] = (mtx['vscore'] + 1) / (mtx['score'] + 2)
         if func is not None:
             mtx['hscore'] = mtx.hscore.apply(func)
             mtx['vscore'] = mtx.vscore.apply(func)
-        mtx['hscore'] = mtx['hscore']*mtx['weight']
-        mtx['vscore'] = mtx['vscore']*mtx['weight']
+        mtx['hscore'] = mtx['hscore'] * mtx['weight']
+        mtx['vscore'] = mtx['vscore'] * mtx['weight']
         mtx = mtx.groupby(['hidx', 'vidx'])[['hscore', 'vscore']].mean()
         mtx.reset_index(inplace=True)
 
-        D = coo_matrix((mtx.hscore.values, (mtx.hidx.values, mtx.vidx.values)), shape=(table.itemnum, table.itemnum)).tocsr()
+        D = coo_matrix((mtx.hscore.values, (mtx.hidx.values, mtx.vidx.values)),
+                       shape=(table.itemnum, table.itemnum)).tocsr()
 
-        r = np.ones(table.itemnum)/table.itemnum
+        r = np.ones(table.itemnum) / table.itemnum
         pr = np.ones(table.itemnum)
-        while norm(pr-r)>threshold:
+        while norm(pr - r) > threshold:
             pr = r
-            rho = np.sum(r)*epsilon
-            r = D.dot(r)+rho*np.ones(table.itemnum)
+            rho = np.sum(r) * epsilon
+            r = D.dot(r) + rho * np.ones(table.itemnum)
             r /= np.sum(r)
 
         if hasattr(self, "rating"):
@@ -196,6 +208,7 @@ class KeenerRanker(UnsupervisedRanker):
                 "iidx": np.arange(table.itemnum, dtype=np.int32),
                 "rating": r})
         return self._showcase(table, False)
+
 
 class MarkovRanker(UnsupervisedRanker):
     """Markov ranking is actually PageRank.
@@ -209,10 +222,11 @@ class MarkovRanker(UnsupervisedRanker):
     threshold: (0, +Inf), default 1e-4
         The threshold that controls when the algorithm will converge.
     """
+
     def __init__(self, restart=0.3, threshold=1e-4):
         self.restart = restart
         self.threshold = threshold
-    
+
     def rank(self, table):
         """Calculate the rank and rating with specified parameters.
 
@@ -226,7 +240,7 @@ class MarkovRanker(UnsupervisedRanker):
         pandas.DataFrame, with column ['name', 'rating', 'rank']
         """
         restart, threshold = self.restart, self.threshold
-        if restart>1 or restart<0:
+        if restart > 1 or restart < 0:
             raise ValueError("restart rate should be between 0 and 1.")
         mtx = pd.DataFrame(data={
             'hidx': pd.concat([table.table.hidx, table.table.vidx]),
@@ -234,25 +248,26 @@ class MarkovRanker(UnsupervisedRanker):
             'hscore': pd.concat([table.table.hscore, table.table.vscore]),
             'vscore': pd.concat([table.table.vscore, table.table.hscore]),
             'weight': pd.concat([table.table.weight, table.table.weight])
-        }, columns = ['hidx', 'vidx', 'hscore', 'vscore', 'weight']).reset_index(drop=True)
-        mtx['hscore'] = mtx['hscore']*mtx['weight']
-        mtx['vscore'] = mtx['vscore']*mtx['weight']
+        }, columns=['hidx', 'vidx', 'hscore', 'vscore', 'weight']).reset_index(drop=True)
+        mtx['hscore'] = mtx['hscore'] * mtx['weight']
+        mtx['vscore'] = mtx['vscore'] * mtx['weight']
 
         mtx_ = mtx.groupby('hidx').vscore.sum().rename('htotalvote')
-        
+
         mtx = mtx.groupby(['hidx', 'vidx'])[['hscore', 'vscore']].mean()
         mtx = pd.concat([mtx.reset_index().set_index('hidx'), mtx_], axis=1).reset_index()
-        mtx['prob'] = (mtx['vscore']/mtx['htotalvote']).replace(np.nan, 0)
+        mtx['prob'] = (mtx['vscore'] / mtx['htotalvote']).replace(np.nan, 0)
 
-        D = coo_matrix((mtx.prob.values, (mtx.hidx.values, mtx.vidx.values)), shape=(table.itemnum, table.itemnum)).transpose().tocsr()
-        r = np.ones(table.itemnum)/table.itemnum
+        D = coo_matrix((mtx.prob.values, (mtx.hidx.values, mtx.vidx.values)),
+                       shape=(table.itemnum, table.itemnum)).transpose().tocsr()
+        r = np.ones(table.itemnum) / table.itemnum
         pr = np.ones(table.itemnum)
-        while norm(pr-r)>threshold:
+        while norm(pr - r) > threshold:
             pr = r
-            vrestart = restart*np.ones(table.itemnum)/table.itemnum
-            r = (1-restart)*D.dot(r)+vrestart
+            vrestart = restart * np.ones(table.itemnum) / table.itemnum
+            r = (1 - restart) * D.dot(r) + vrestart
             r /= np.sum(r)
-        
+
         if hasattr(self, "rating"):
             self.rating["rating"] = r
         else:
@@ -260,6 +275,7 @@ class MarkovRanker(UnsupervisedRanker):
                 "iidx": np.arange(table.itemnum, dtype=np.int32),
                 "rating": r})
         return self._showcase(table, False)
+
 
 class ODRanker(UnsupervisedRanker):
     """The Offence-defence rank tries to assign an offence rating and a defence rating to each team.
@@ -275,10 +291,11 @@ class ODRanker(UnsupervisedRanker):
     threshold: (0, +Inf), default 1e-4
         The threshold that controls when the algorithm will converge.
     """
+
     def __init__(self, epsilon=1e-4, threshold=1e-4):
         self.epsilon = epsilon
         self.threshold = threshold
-    
+
     def rank(self, table):
         """Calculate the rank and rating with specified parameters.
 
@@ -298,25 +315,26 @@ class ODRanker(UnsupervisedRanker):
             'hscore': pd.concat([table.table.hscore, table.table.vscore]),
             'vscore': pd.concat([table.table.vscore, table.table.hscore]),
             'weight': pd.concat([table.table.weight, table.table.weight])
-        }, columns = ['hidx', 'vidx', 'hscore', 'vscore', 'weight']).reset_index(drop=True)
-        mtx['hscore'] = mtx['hscore']*mtx['weight']
-        mtx['vscore'] = mtx['vscore']*mtx['weight']
+        }, columns=['hidx', 'vidx', 'hscore', 'vscore', 'weight']).reset_index(drop=True)
+        mtx['hscore'] = mtx['hscore'] * mtx['weight']
+        mtx['vscore'] = mtx['vscore'] * mtx['weight']
         mtx = mtx.groupby(['hidx', 'vidx'])[['hscore', 'vscore']].mean()
         mtx.reset_index(inplace=True)
 
-        D = coo_matrix((mtx.vscore.values, (mtx.hidx.values, mtx.vidx.values)), shape=(table.itemnum, table.itemnum)).tocsr()
+        D = coo_matrix((mtx.vscore.values, (mtx.hidx.values, mtx.vidx.values)),
+                       shape=(table.itemnum, table.itemnum)).tocsr()
         Dt = D.transpose()
 
-        prevd = np.ones(table.itemnum)/table.itemnum
+        prevd = np.ones(table.itemnum) / table.itemnum
         d = np.ones(table.itemnum)
-        while norm(prevd-d)>threshold:
+        while norm(prevd - d) > threshold:
             prevd = d
-            o = Dt.dot(1/d)+np.ones(d.shape[0])*epsilon*(np.sum(1/d))
-            d = D.dot(1/o)+np.ones(o.shape[0])*epsilon*(np.sum(1/o))
-        o = Dt.dot(1/d)
+            o = Dt.dot(1 / d) + np.ones(d.shape[0]) * epsilon * (np.sum(1 / d))
+            d = D.dot(1 / o) + np.ones(o.shape[0]) * epsilon * (np.sum(1 / o))
+        o = Dt.dot(1 / d)
 
         ratings = {
-            'summary': o/d,
+            'summary': o / d,
             'offence': o,
             'defence': d,
         }
@@ -326,7 +344,7 @@ class ODRanker(UnsupervisedRanker):
             self.rating = pd.DataFrame({
                 "iidx": np.arange(table.itemnum, dtype=np.int32),
                 "rating": r})
-            showcase = self._showcase(table, True if rating_name=='defence' else False)
+            showcase = self._showcase(table, True if rating_name == 'defence' else False)
             res[rating_name] = showcase
 
         return res
@@ -336,6 +354,7 @@ class DifferenceRanker(UnsupervisedRanker):
     """This ranker targets at predicting score difference of games directly.
     The difference of ratings are proportional to the difference of score.
     """
+
     def rank(self, table):
         """Calculate the rank and rating with specified parameters.
 
@@ -354,11 +373,11 @@ class DifferenceRanker(UnsupervisedRanker):
             'hscore': pd.concat([table.table.hscore, table.table.vscore]),
             'vscore': pd.concat([table.table.vscore, table.table.hscore]),
             'weight': pd.concat([table.table.weight, table.table.weight])
-        }, columns = ['hidx', 'vidx', 'hscore', 'vscore', 'weight']).reset_index(drop=True)
-        mtx['score'] = mtx['hscore']-mtx['vscore']
-        mtx['score'] = mtx['score']*mtx['weight']
+        }, columns=['hidx', 'vidx', 'hscore', 'vscore', 'weight']).reset_index(drop=True)
+        mtx['score'] = mtx['hscore'] - mtx['vscore']
+        mtx['score'] = mtx['score'] * mtx['weight']
         mtx = mtx.groupby(['hidx', 'vidx']).score.mean().reset_index()
-        r = mtx.groupby('hidx').score.sum()/table.itemnum
+        r = mtx.groupby('hidx').score.sum() / table.itemnum
         r = r.sort_index()
 
         if hasattr(self, "rating"):
@@ -368,4 +387,3 @@ class DifferenceRanker(UnsupervisedRanker):
                 "iidx": np.arange(table.itemnum, dtype=np.int32),
                 "rating": r})
         return self._showcase(table, False)
-

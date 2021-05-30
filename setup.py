@@ -8,9 +8,10 @@ if os.path.exists('MANIFEST'):
 with open('requirements.txt') as f:
     required = f.read().splitlines()
 
+
 def my_build_ext(pars):
     # import delayed:
-    from setuptools.command.build_ext import build_ext as _build_ext#
+    from setuptools.command.build_ext import build_ext as _build_ext  #
 
     # include_dirs adjusted: 
     class build_ext(_build_ext):
@@ -21,8 +22,9 @@ def my_build_ext(pars):
             import numpy
             self.include_dirs.append(numpy.get_include())
 
-    #object returned:
+    # object returned:
     return build_ext(pars)
+
 
 setup(name="rankit",
       version="0.3.0",
@@ -35,11 +37,11 @@ setup(name="rankit",
       author_email="geniusxiaoguai@gmail.com",
       url="http://github.com/wattlebird/ranking",
       license="MIT",
-      cmdclass={'build_ext' : my_build_ext},
+      cmdclass={'build_ext': my_build_ext},
       ext_modules=[
-            Extension("rankit.Ranker.matrix_build",
-                        ["rankit/Ranker/matrix_build.pyx"]
-            )
+          Extension("rankit.Ranker.matrix_build",
+                    ["rankit/Ranker/matrix_build.pyx"]
+                    )
       ],
       classifiers=['Intended Audience :: Science/Research',
                    'Intended Audience :: Developers',
@@ -50,5 +52,5 @@ setup(name="rankit",
                    'Programming Language :: Python :: 2.7',
                    'Programming Language :: Python :: 3.5',
                    'Programming Language :: Python :: 3.6'],
-      test_suite = 'nose.collector'
+      test_suite='nose.collector'
       )
