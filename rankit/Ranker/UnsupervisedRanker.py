@@ -26,6 +26,8 @@ class UnsupervisedRanker(object):
         rst = pd.DataFrame({
             "name": itemname,
             "rating": rating["rating"]})
+
+        rst['rating'].fillna(0, inplace=True)
         rst['rank'] = rst.rating.rank(method='min', ascending=ascending).astype(np.int32)
         return rst.sort_values(by=['rating', 'name'], ascending=ascending).reset_index(drop=True)
 
