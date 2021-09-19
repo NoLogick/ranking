@@ -171,6 +171,8 @@ class EloRanker(TimeSeriesRanker):
             "name": self.data.indexlut,
             "rating": self.indexScoreLut
         }, columns=["name", "rating"])
+
+        rtn['rank'].fillna(0, inplace=True)
         rtn['rank'] = rtn.rating.rank(method=method, ascending=False).astype(np.int32)
         return rtn.sort_values(by=['rating', 'name'], ascending=False).reset_index(drop=True)
 
@@ -396,6 +398,8 @@ class TrueSkillRanker(TimeSeriesRanker):
             "rating": [self.rd * (i - 1.96 * j ** (1 / 2) - 3) + self.baseline for (i, j) in
                        zip(self.indexMiuLut, self.indexSigmaSqrLut)]
         }, columns=["name", "rating"])
+
+        rtn['rank'].fillna(0, inplace=True)
         rtn['rank'] = rtn.rating.rank(method=method, ascending=False).astype(np.int32)
         return rtn.sort_values(by=['rating', 'name'], ascending=False).reset_index(drop=True)
 
@@ -626,5 +630,7 @@ class GlickoRanker(TimeSeriesRanker):
             "name": self.data.indexlut,
             "rating": [self.factor * (i - 1.96 * j) + self.baseline for (i, j) in zip(self.miu, self.phi)]
         }, columns=["name", "rating"])
+
+        rtn['rank'].fillna(0, inplace=True)
         rtn['rank'] = rtn.rating.rank(method=method, ascending=False).astype(np.int32)
         return rtn.sort_values(by=['rating', 'name'], ascending=False).reset_index(drop=True)
