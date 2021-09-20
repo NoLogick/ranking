@@ -27,7 +27,7 @@ class UnsupervisedRanker(object):
             "name": itemname,
             "rating": rating["rating"]})
 
-        rst['rating'].fillna(0, inplace=True)
+        rst['rating'] = rst['rating'].replace([np.inf, -np.inf, np.nan], 0)
         rst['rank'] = rst.rating.rank(method='min', ascending=ascending).astype(np.int32)
         return rst.sort_values(by=['rating', 'name'], ascending=ascending).reset_index(drop=True)
 
