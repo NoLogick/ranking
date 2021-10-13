@@ -335,28 +335,31 @@ class TrueSkillRanker(TimeSeriesRanker):
             self.indexMiuLut = self.indexMiuLut[:] + [self.miu] * (self.data.itemnum - len(self.indexMiuLut))
             self.indexSigmaSqrLut = self.indexSigmaSqrLut[:] + [1] * (self.data.itemnum - len(self.indexSigmaSqrLut))
 
-        for rec in table.iteritem():
-            ih, iv, hscore, vscore = rec.indexHost, rec.indexVisit, rec.hscore, rec.vscore
-            mh = self.indexMiuLut[ih]
-            mv = self.indexMiuLut[iv]
-            sh = self.indexSigmaSqrLut[ih]
-            sv = self.indexSigmaSqrLut[iv]
-            cs = sh + sv + 2 * beta * beta
-            if abs(hscore - vscore) <= drawMargin:
-                self.indexMiuLut[ih] += sh * vt(0, realDrawMargin / cs ** (1 / 2)) / cs ** (1 / 2)
-                self.indexMiuLut[iv] += sv * vt(0, realDrawMargin / cs ** (1 / 2)) / cs ** (1 / 2)
-                self.indexSigmaSqrLut[ih] *= (1 - sh / cs * wt(0, realDrawMargin / cs ** (1 / 2)))
-                self.indexSigmaSqrLut[iv] *= (1 - sv / cs * wt(0, realDrawMargin / cs ** (1 / 2)))
-            else:
-                b = 1 if hscore > vscore + drawMargin else -1
-                self.indexMiuLut[ih] += b * sh * v(b * (mh - mv) / cs ** (1 / 2),
-                                                   realDrawMargin / cs ** (1 / 2)) / cs ** (1 / 2)
-                self.indexMiuLut[iv] -= b * sv * v(b * (mv - mh) / cs ** (1 / 2),
-                                                   realDrawMargin / cs ** (1 / 2)) / cs ** (1 / 2)
-                self.indexSigmaSqrLut[ih] *= (
-                            1 - sh * w(b * (mh - mv) / cs ** (1 / 2), realDrawMargin / cs ** (1 / 2)) / cs)
-                self.indexSigmaSqrLut[iv] *= (
-                            1 - sv * w(b * (mv - mh) / cs ** (1 / 2), realDrawMargin / cs ** (1 / 2)) / cs)
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+
+            for rec in table.iteritem():
+                ih, iv, hscore, vscore = rec.indexHost, rec.indexVisit, rec.hscore, rec.vscore
+                mh = self.indexMiuLut[ih]
+                mv = self.indexMiuLut[iv]
+                sh = self.indexSigmaSqrLut[ih]
+                sv = self.indexSigmaSqrLut[iv]
+                cs = sh + sv + 2 * beta * beta
+                if abs(hscore - vscore) <= drawMargin:
+                    self.indexMiuLut[ih] += sh * vt(0, realDrawMargin / cs ** (1 / 2)) / cs ** (1 / 2)
+                    self.indexMiuLut[iv] += sv * vt(0, realDrawMargin / cs ** (1 / 2)) / cs ** (1 / 2)
+                    self.indexSigmaSqrLut[ih] *= (1 - sh / cs * wt(0, realDrawMargin / cs ** (1 / 2)))
+                    self.indexSigmaSqrLut[iv] *= (1 - sv / cs * wt(0, realDrawMargin / cs ** (1 / 2)))
+                else:
+                    b = 1 if hscore > vscore + drawMargin else -1
+                    self.indexMiuLut[ih] += b * sh * v(b * (mh - mv) / cs ** (1 / 2),
+                                                       realDrawMargin / cs ** (1 / 2)) / cs ** (1 / 2)
+                    self.indexMiuLut[iv] -= b * sv * v(b * (mv - mh) / cs ** (1 / 2),
+                                                       realDrawMargin / cs ** (1 / 2)) / cs ** (1 / 2)
+                    self.indexSigmaSqrLut[ih] *= (
+                                1 - sh * w(b * (mh - mv) / cs ** (1 / 2), realDrawMargin / cs ** (1 / 2)) / cs)
+                    self.indexSigmaSqrLut[iv] *= (
+                                1 - sv * w(b * (mv - mh) / cs ** (1 / 2), realDrawMargin / cs ** (1 / 2)) / cs)
 
     def prob_win(self, host, visit):
         """
